@@ -1,0 +1,6 @@
+*.csv
+train_data.txt
+test_data.txt
+models/processed_data.pkl
+models/fraud_model.pkl
+data/
