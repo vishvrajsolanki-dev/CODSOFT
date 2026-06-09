@@ -1,63 +1,27 @@
-# Credit Card Fraud Detection
+# 🤖 CodSoft Machine Learning Internship
 
-A machine learning project that detects fraudulent credit card transactions using XGBoost and SMOTE-based class balancing.
+**Intern:** Vishvrajsinh Solanki  
+**Internship ID:** BY26RY201126  
+**Duration:** May 25 – June 25, 2026  
+**Domain:** Machine Learning  
 
-## Problem
+---
 
-Fraud transactions make up less than 1% of all transactions. A naive model that predicts everything as legitimate achieves 99% accuracy but is completely useless. This project addresses that imbalance directly.
+## 📁 Tasks
 
-## Dataset
+| # | Task | Approach | Status |
+|---|------|----------|--------|
+| 1 | [Movie Genre Classification](./Task_1_Movie_Genre_Classification/) | TF-IDF + Naive Bayes / LR / SVM | 🔄 In Progress |
+| 2 | [Credit Card Fraud Detection](./Task_2_Credit_Card_Fraud_Detection/) | SMOTE + Random Forest | ⏳ Pending |
+| 3 | [Customer Churn Prediction](./Task_3_Customer_Churn_Prediction/) | Gradient Boosting | ⏳ Pending |
+| 4 | [Spam SMS Detection](./Task_4_Spam_SMS_Detection/) | TF-IDF + Naive Bayes | ⏳ Pending |
+| 5 | [Handwritten Text Generation](./Task_5_Handwritten_Text_Generation/) | Character-level LSTM | ⏳ Pending |
 
-Transaction dataset split into train (1.29M rows) and test (555K rows) sets.
-Fraud rate: 0.58%
+---
 
-## Approach
+## 🛠️ Tech Stack
+Python · scikit-learn · pandas · NumPy · Matplotlib · Seaborn · NLTK · TensorFlow · Jupyter
 
-- Extracted time-based features from transaction timestamps (hour, day, month)
-- Computed cardholder age from date of birth
-- Computed geographic distance between cardholder and merchant
-- Applied SMOTE to balance the training set from 0.58% fraud to 50/50
-- Trained an XGBoost classifier on the balanced data
-- Evaluated using Precision, Recall, F1-score, and ROC-AUC
-
-## Results
-
-| Metric | Value |
-|--------|-------|
-| ROC-AUC | 0.9771 |
-| Fraud Recall | 88% |
-| Overall Accuracy | 98% |
-
-Recall was prioritized over precision. Missing a fraud is worse than a false alarm.
-
-## Tech Stack
-
-- Python 3.11
-- pandas, numpy
-- scikit-learn
-- imbalanced-learn (SMOTE)
-- XGBoost
-- matplotlib, seaborn
-- Streamlit
-
-## Project Structure
-
-credit-fraud-detection/
-├── data/
-├── models/
-├── preprocess.py
-├── train.py
-├── evaluate.py
-├── app.py
-└── requirements.txt
-
-## Usage
-
-python preprocess.py
-python train.py
-python evaluate.py
-streamlit run app.py
-
-## Author
-
-Vishvraj
+## 🔗 Links
+- [LinkedIn](https://www.linkedin.com/in/vishvrajsinh-solanki-1396ab37a/?skipRedirect=true)
+- [CodSoft](https://www.linkedin.com/company/codsoft)
