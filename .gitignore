@@ -1,7 +1,10 @@
 *.csv
 train_data.txt
 test_data.txt
-models/processed_data.pkl
-models/fraud_model.pkl
-data/
-venv/ 
+test_data_solution.txt
+description.txt
+venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+desktop.ini
