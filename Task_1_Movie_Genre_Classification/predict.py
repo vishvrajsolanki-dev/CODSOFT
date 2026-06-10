@@ -1,9 +1,12 @@
 import pickle
+import os
 from utils import clean_text
 
-with open('models/model.pkl', 'rb') as f:
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+with open(os.path.join(BASE_DIR, 'models', 'model.pkl'), 'rb') as f:
     model = pickle.load(f)
-with open('models/vectorizer.pkl', 'rb') as f:
+with open(os.path.join(BASE_DIR, 'models', 'vectorizer.pkl'), 'rb') as f:
     vectorizer = pickle.load(f)
 
 def predict_genre(plot_summary):

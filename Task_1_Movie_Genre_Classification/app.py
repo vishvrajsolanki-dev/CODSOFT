@@ -1,466 +1,354 @@
+import os
+import pickle
 import streamlit as st
-from predict import predict_genre
+from utils import clean_text
 
 st.set_page_config(
-    page_title="PlotSense — Movie Genre AI",
+    page_title="CineGenre AI",
     page_icon="🎬",
-    layout="wide",
+    layout="centered",
     initial_sidebar_state="collapsed"
 )
 
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:ital,wght@0,400;0,500;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500&display=swap');
 
-/* ── RESET & BASE ─────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; }
-
-html, body { margin: 0; padding: 0; }
-
-.stApp,
-[data-testid="stAppViewContainer"],
-[data-testid="stMain"],
-[data-testid="stMainBlockContainer"],
-section[data-testid="stAppViewContainer"],
-.main {
-    background: #0F0F17 !important;
-    font-family: 'DM Sans', sans-serif !important;
-    color: #C8C8D8 !important;
+html, body, [class*="css"] {
+    font-family: 'DM Sans', sans-serif;
+    background-color: #0A0A0F;
+    color: #E8E8F0;
 }
 
-/* Kill all streamlit chrome */
-[data-testid="stHeader"],
-[data-testid="stToolbar"],
-[data-testid="stDecoration"],
-#MainMenu, footer, header,
-.stDeployButton { display: none !important; visibility: hidden !important; }
+.stApp {
+    background: #0A0A0F;
+}
 
-/* Wide layout — centered column with side gutter */
 .main .block-container {
-    max-width: 860px !important;
-    margin: 0 auto !important;
-    padding: 0 2rem 5rem !important;
+    padding-top: 2rem;
+    padding-bottom: 3rem;
+    max-width: 760px;
 }
 
-/* Force text color globally — fixes invisible fonts */
-p, span, div, label, h1, h2, h3, h4, h5, h6, li, td, th {
-    color: #C8C8D8 !important;
-    font-family: 'DM Sans', sans-serif !important;
-}
-
-/* ── BACKGROUND GRAIN TEXTURE ─────────────────── */
-.stApp::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image:
-        radial-gradient(ellipse 80% 60% at 50% -10%, rgba(245,197,24,0.06) 0%, transparent 60%),
-        radial-gradient(ellipse 40% 40% at 10% 80%, rgba(100,80,200,0.04) 0%, transparent 50%);
-    pointer-events: none;
-    z-index: 0;
-}
-
-/* ── HERO ─────────────────────────────────────── */
-.hero {
+.cinema-header {
     text-align: center;
-    padding: 5rem 1rem 3rem;
-    position: relative;
+    padding: 2.5rem 0 1.5rem;
+    border-bottom: 1px solid #1E1E2E;
+    margin-bottom: 2rem;
 }
 
-.hero-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    background: rgba(245,197,24,0.07);
-    border: 1px solid rgba(245,197,24,0.18);
-    border-radius: 100px;
-    padding: 5px 16px 5px 10px;
-    font-size: 0.68rem;
+.cinema-logo {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 2.6rem;
+    font-weight: 700;
+    color: #F5C518;
+    letter-spacing: -0.5px;
+    margin: 0;
+    line-height: 1;
+}
+
+.cinema-logo span {
+    color: #FFFFFF;
+}
+
+.cinema-tagline {
+    font-size: 0.85rem;
+    color: #6B6B80;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    margin-top: 0.5rem;
+    font-weight: 400;
+}
+
+.film-strip {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 1rem;
+}
+
+.film-cell {
+    width: 18px;
+    height: 12px;
+    background: #1E1E2E;
+    border-radius: 2px;
+}
+
+.film-cell.active {
+    background: #F5C518;
+}
+
+.section-label {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.7rem;
     font-weight: 600;
     letter-spacing: 2px;
     text-transform: uppercase;
-    color: #C8A010 !important;
-    margin-bottom: 1.4rem;
+    color: #6B6B80;
+    margin-bottom: 0.6rem;
 }
 
-.badge-dot {
-    width: 7px; height: 7px;
-    background: #F5C518;
-    border-radius: 50%;
-    flex-shrink: 0;
-    animation: blink 2.4s ease-in-out infinite;
-}
-@keyframes blink {
-    0%,100% { opacity:1; } 50% { opacity:0.25; }
-}
-
-.hero-title {
-    font-family: 'Space Grotesk', sans-serif !important;
-    font-size: 4.4rem !important;
-    font-weight: 700 !important;
-    line-height: 1.02 !important;
-    letter-spacing: -2.5px !important;
-    color: #FFFFFF !important;
-    margin: 0 0 0.8rem !important;
-}
-
-.hero-title .gold { color: #F5C518 !important; }
-.hero-title .dim  { color: #2A2A3E !important; }
-
-.hero-desc {
-    font-size: 1.05rem !important;
-    color: #6A6A82 !important;
-    line-height: 1.65 !important;
-    max-width: 500px;
-    margin: 0 auto 2.2rem !important;
-    font-weight: 400 !important;
-}
-
-/* Film reel strip */
-.filmstrip {
-    display: flex;
-    justify-content: center;
-    gap: 4px;
-    margin-bottom: 0.5rem;
-}
-.fc { width: 20px; height: 13px; background: #181828; border-radius: 3px; }
-.fc.on { background: #F5C518; }
-.fc.half { background: #2A2210; }
-
-/* ── STATS BAR ────────────────────────────────── */
-.stats-bar {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    border: 1px solid #1C1C2C;
-    border-radius: 14px;
-    overflow: hidden;
-    margin: 2.2rem 0 2rem;
-    background: #131320;
-}
-
-.stat-item {
-    padding: 1.6rem 1rem;
-    text-align: center;
-    border-right: 1px solid #1C1C2C;
-}
-.stat-item:last-child { border-right: none; }
-
-.stat-num {
-    font-family: 'Space Grotesk', sans-serif !important;
-    font-size: 2rem !important;
-    font-weight: 700 !important;
-    color: #F5C518 !important;
-    letter-spacing: -1px !important;
-    line-height: 1 !important;
-}
-
-.stat-lbl {
-    font-size: 0.62rem !important;
-    font-weight: 600 !important;
-    letter-spacing: 2px !important;
-    text-transform: uppercase !important;
-    color: #3A3A55 !important;
-    margin-top: 6px !important;
-}
-
-/* ── FIELD LABELS ─────────────────────────────── */
-.field-label {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-family: 'Space Grotesk', sans-serif !important;
-    font-size: 0.62rem !important;
-    font-weight: 700 !important;
-    letter-spacing: 2.5px !important;
-    text-transform: uppercase !important;
-    color: #4A4A65 !important;
-    margin-bottom: 0.55rem !important;
-}
-.field-label::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: #1C1C2C;
-}
-
-/* ── SELECTBOX ────────────────────────────────── */
-.stSelectbox > div > div,
-.stSelectbox [data-baseweb="select"] > div {
-    background: #131320 !important;
-    border: 1px solid #222235 !important;
-    border-radius: 10px !important;
-    color: #C8C8D8 !important;
-    font-family: 'DM Sans', sans-serif !important;
-    font-size: 0.93rem !important;
-}
-
-/* ── TEXTAREA ─────────────────────────────────── */
 .stTextArea textarea {
-    background: #131320 !important;
-    border: 1px solid #222235 !important;
+    background: #12121C !important;
+    border: 1px solid #2A2A3E !important;
     border-radius: 12px !important;
-    color: #D8D8E8 !important;
+    color: #E8E8F0 !important;
     font-family: 'DM Sans', sans-serif !important;
-    font-size: 0.97rem !important;
-    line-height: 1.75 !important;
-    padding: 1.1rem 1.3rem !important;
-    caret-color: #F5C518 !important;
+    font-size: 0.95rem !important;
+    line-height: 1.7 !important;
+    padding: 1rem 1.2rem !important;
+    caret-color: #F5C518;
+    transition: border-color 0.2s ease;
     resize: none !important;
-    transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .stTextArea textarea:focus {
-    border-color: rgba(245,197,24,0.45) !important;
-    box-shadow: 0 0 0 3px rgba(245,197,24,0.05) !important;
+    border-color: #F5C518 !important;
+    box-shadow: 0 0 0 3px rgba(245, 197, 24, 0.08) !important;
 }
 
 .stTextArea textarea::placeholder {
-    color: #252535 !important;
-    font-style: italic !important;
+    color: #3A3A52 !important;
+    font-style: italic;
 }
 
-/* ── CHAR COUNT ───────────────────────────────── */
-.char-count {
-    font-size: 0.69rem !important;
-    color: #2E2E45 !important;
-    text-align: right !important;
-    margin-top: -0.2rem !important;
-    margin-bottom: 0.6rem !important;
-    font-family: 'Space Grotesk', sans-serif !important;
-    letter-spacing: 0.5px !important;
-}
-
-/* ── PREDICT BUTTON ───────────────────────────── */
 .stButton > button {
     background: #F5C518 !important;
-    color: #0A0A10 !important;
+    color: #0A0A0F !important;
     border: none !important;
-    border-radius: 12px !important;
+    border-radius: 10px !important;
     font-family: 'Space Grotesk', sans-serif !important;
-    font-weight: 700 !important;
-    font-size: 0.83rem !important;
-    letter-spacing: 2px !important;
-    padding: 0.85rem 2rem !important;
+    font-weight: 600 !important;
+    font-size: 0.9rem !important;
+    letter-spacing: 0.5px !important;
+    padding: 0.65rem 2rem !important;
     width: 100% !important;
+    transition: all 0.2s ease !important;
     cursor: pointer !important;
-    text-transform: uppercase !important;
-    transition: background 0.15s, box-shadow 0.15s !important;
 }
+
 .stButton > button:hover {
     background: #FFD340 !important;
-    box-shadow: 0 0 32px rgba(245,197,24,0.22) !important;
-}
-
-/* ── RESULT ───────────────────────────────────── */
-.result-wrap { margin-top: 1.4rem; animation: fadeUp 0.35s ease; }
-
-@keyframes fadeUp {
-    from { opacity:0; transform:translateY(10px); }
-    to   { opacity:1; transform:translateY(0); }
+    transform: translateY(-1px) !important;
+    box-shadow: 0 6px 20px rgba(245, 197, 24, 0.25) !important;
 }
 
 .result-card {
-    background: #131320;
-    border: 1px solid #1C1C2C;
-    border-top: 2px solid #F5C518;
-    border-radius: 14px;
-    padding: 2rem 2.2rem;
-    position: relative;
-    overflow: hidden;
+    background: #12121C;
+    border: 1px solid #2A2A3E;
+    border-left: 3px solid #F5C518;
+    border-radius: 12px;
+    padding: 1.5rem 1.8rem;
+    margin-top: 1.5rem;
 }
 
-.result-card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0; height: 90px;
-    background: radial-gradient(ellipse at 50% -30%, rgba(245,197,24,0.08) 0%, transparent 70%);
-    pointer-events: none;
-}
-
-.result-eyebrow {
-    font-size: 0.6rem !important;
-    font-weight: 700 !important;
-    letter-spacing: 2.5px !important;
-    text-transform: uppercase !important;
-    color: #3A3A55 !important;
-    margin-bottom: 0.5rem !important;
-    font-family: 'Space Grotesk', sans-serif !important;
+.result-label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: #6B6B80;
+    margin-bottom: 0.5rem;
+    font-family: 'Space Grotesk', sans-serif;
 }
 
 .result-genre {
-    font-family: 'Space Grotesk', sans-serif !important;
-    font-size: 3rem !important;
-    font-weight: 700 !important;
-    color: #F5C518 !important;
-    letter-spacing: -1.5px !important;
-    line-height: 1 !important;
-    margin-bottom: 1.3rem !important;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 2rem;
+    font-weight: 700;
+    color: #F5C518;
+    margin: 0;
+    line-height: 1.1;
 }
 
-.pills { display: flex; gap: 8px; flex-wrap: wrap; }
-
-.pill {
-    background: #0F0F1A;
-    border: 1px solid #1C1C2C;
-    border-radius: 6px;
-    padding: 4px 11px;
-    font-size: 0.68rem !important;
-    color: #3E3E58 !important;
-    font-family: 'Space Grotesk', sans-serif !important;
-    letter-spacing: 0.3px;
+.result-meta {
+    font-size: 0.8rem;
+    color: #4A4A60;
+    margin-top: 0.8rem;
+    padding-top: 0.8rem;
+    border-top: 1px solid #1E1E2E;
 }
 
-/* ── WARNING ──────────────────────────────────── */
-div[data-testid="stAlert"] {
-    background: rgba(245,197,24,0.05) !important;
-    border: 1px solid rgba(245,197,24,0.15) !important;
-    border-radius: 10px !important;
-}
-div[data-testid="stAlert"] p { color: #907010 !important; }
-
-/* ── SECTION DIVIDER ──────────────────────────── */
-.sdiv {
-    height: 1px;
-    background: linear-gradient(90deg, transparent, #1C1C2C 30%, #1C1C2C 70%, transparent);
-    margin: 1.8rem 0;
+.stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin: 1.5rem 0;
 }
 
-/* ── FOOTER ───────────────────────────────────── */
-.site-footer {
+.stat-card {
+    background: #12121C;
+    border: 1px solid #1E1E2E;
+    border-radius: 10px;
+    padding: 1rem;
     text-align: center;
-    padding-top: 2rem;
-    margin-top: 4rem;
-    border-top: 1px solid #131320;
 }
-.footer-name {
-    font-family: 'Space Grotesk', sans-serif !important;
-    font-size: 0.92rem !important;
-    font-weight: 600 !important;
-    color: #2A2A40 !important;
+
+.stat-value {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #F5C518;
 }
-.footer-meta {
-    font-size: 0.68rem !important;
-    color: #1E1E2E !important;
-    margin-top: 4px !important;
-    letter-spacing: 0.4px !important;
+
+.stat-label {
+    font-size: 0.72rem;
+    color: #6B6B80;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 3px;
 }
+
+.cinema-divider {
+    border: none;
+    border-top: 1px solid #1E1E2E;
+    margin: 2rem 0;
+}
+
+.cinema-footer {
+    text-align: center;
+    color: #3A3A52;
+    font-size: 0.75rem;
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #1E1E2E;
+    letter-spacing: 0.5px;
+}
+
+#MainMenu, footer, header { visibility: hidden; }
+.stDeployButton { display: none; }
 </style>
 """, unsafe_allow_html=True)
 
-# ── DATA ──────────────────────────────────────────────────────────
 GENRE_ICONS = {
-    "action":"💥","adventure":"🗺️","animation":"🎨","biography":"📖",
-    "comedy":"😄","crime":"🔫","documentary":"🎙️","drama":"🎭",
-    "family":"👨‍👩‍👧","fantasy":"🧙","game-show":"🎮","history":"🏛️",
-    "horror":"👻","music":"🎵","musical":"🎼","mystery":"🔍",
-    "news":"📰","reality-tv":"📺","romance":"❤️","sci-fi":"🚀",
-    "short":"⏱️","sport":"⚽","talk-show":"🎤","thriller":"😰",
-    "war":"⚔️","western":"🤠","adult":"🔞"
+    "action": "💥", "adventure": "🗺️", "animation": "🎨", "biography": "📖",
+    "comedy": "😄", "crime": "🔫", "documentary": "🎙️", "drama": "🎭",
+    "family": "👨‍👩‍👧", "fantasy": "🧙", "game-show": "🎮", "history": "🏛️",
+    "horror": "👻", "music": "🎵", "musical": "🎼", "mystery": "🔍",
+    "news": "📰", "reality-tv": "📺", "romance": "❤️", "sci-fi": "🚀",
+    "short": "⏱️", "sport": "⚽", "talk-show": "🎤", "thriller": "😰",
+    "war": "⚔️", "western": "🤠", "adult": "🔞"
 }
 
-EXAMPLES = {
-    "— pick a genre to load —": "",
-    "⚡  Action":      "A retired black-ops soldier must race across three continents to dismantle a shadow organization that framed him for a political assassination and kidnapped his daughter.",
-    "🚀  Sci-Fi":      "In 2157, a rogue AI controlling the global power grid demands a human sacrifice every 24 hours — and the engineer who built it is the only one who can shut it down.",
-    "❤️  Romance":     "Two rival food critics, forced to share a tiny Paris apartment for a weekend assignment, discover their fiercest arguments are hiding something far more dangerous.",
-    "👻  Horror":      "A rural family starts receiving voicemails from their deceased grandmother — messages that describe, in perfect detail, events that haven't happened yet.",
-    "😄  Comedy":      "A strait-laced tax auditor accidentally enrolls in a professional clown academy and must survive a full week of classes to retrieve his stolen briefcase.",
-    "🎙️  Documentary": "Three generations of fishermen on a remote Norwegian island reckon with the collapse of their way of life as warming seas push the fish deeper and further away.",
-    "🎭  Drama":       "A celebrated concert pianist returns to her hometown after twenty years to settle her estranged father's estate — and uncovers the lie that drove her away.",
-    "🔍  Mystery":     "When a famous novelist is found dead in a locked cabin with no footprints in the snow, the detective realizes every clue points directly at herself.",
+EXAMPLE_PLOTS = {
+    "Action": "A retired special forces operative goes on a violent rampage through a city to rescue his kidnapped daughter from a ruthless crime syndicate.",
+    "Sci-Fi": "In a dystopian future, a rogue scientist discovers that human consciousness can be uploaded to a digital realm, blurring the line between life and death.",
+    "Romance": "Two strangers meet by chance on a train across Europe and spend 24 hours together, falling deeply in love despite their vastly different lives.",
+    "Horror": "A family moves into a remote farmhouse only to discover that the previous owners were brutally murdered and whatever killed them never left.",
+    "Comedy": "A bumbling accountant accidentally becomes the most wanted man in three countries after mistakenly picking up a briefcase full of stolen diamonds.",
+    "Documentary": "Filmmakers spend three years embedded with a remote indigenous tribe in the Amazon, documenting their ancient traditions and fight against deforestation.",
 }
 
-# ── HERO ──────────────────────────────────────────────────────────
+@st.cache_resource
+def load_model():
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    with open(os.path.join(BASE_DIR, 'models', 'model.pkl'), 'rb') as f:
+        model = pickle.load(f)
+    with open(os.path.join(BASE_DIR, 'models', 'vectorizer.pkl'), 'rb') as f:
+        vectorizer = pickle.load(f)
+    return model, vectorizer
+
+model, vectorizer = load_model()
+
+def predict_genre(plot_summary):
+    cleaned = clean_text(plot_summary)
+    vec = vectorizer.transform([cleaned])
+    return model.predict(vec)[0]
+
 st.markdown("""
-<div class="hero">
-  <div class="hero-badge"><span class="badge-dot"></span>CodSoft ML Internship &nbsp;·&nbsp; Task 1</div>
-  <h1 class="hero-title">Plot<span class="gold">Sense</span><span class="dim">.</span></h1>
-  <p class="hero-desc">
-    Paste any movie plot and watch the model decide its genre —
-    Logistic Regression trained on 54,214 IMDB titles across 27 categories.
-  </p>
-  <div class="filmstrip">
-    <div class="fc on"></div><div class="fc"></div><div class="fc on"></div>
-    <div class="fc on"></div><div class="fc half"></div><div class="fc on"></div>
-    <div class="fc"></div><div class="fc on"></div><div class="fc on"></div>
-    <div class="fc half"></div><div class="fc on"></div><div class="fc"></div>
-    <div class="fc on"></div>
-  </div>
+<div class="cinema-header">
+    <p class="cinema-logo">CINE<span>GENRE</span> <span style="color:#F5C518">AI</span></p>
+    <p class="cinema-tagline">Machine Learning · Plot Intelligence · 27 Genres</p>
+    <div class="film-strip">
+        <div class="film-cell active"></div>
+        <div class="film-cell"></div>
+        <div class="film-cell active"></div>
+        <div class="film-cell active"></div>
+        <div class="film-cell"></div>
+        <div class="film-cell active"></div>
+        <div class="film-cell"></div>
+        <div class="film-cell active"></div>
+        <div class="film-cell active"></div>
+        <div class="film-cell"></div>
+        <div class="film-cell active"></div>
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
-# ── STATS ─────────────────────────────────────────────────────────
 st.markdown("""
-<div class="stats-bar">
-  <div class="stat-item">
-    <div class="stat-num">54,214</div>
-    <div class="stat-lbl">Training Samples</div>
-  </div>
-  <div class="stat-item">
-    <div class="stat-num">58.7%</div>
-    <div class="stat-lbl">Test Accuracy</div>
-  </div>
-  <div class="stat-item">
-    <div class="stat-num">27</div>
-    <div class="stat-lbl">Genre Classes</div>
-  </div>
+<div class="stats-row">
+    <div class="stat-card">
+        <div class="stat-value">54,214</div>
+        <div class="stat-label">Training Samples</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">60.25%</div>
+        <div class="stat-label">Accuracy</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">27</div>
+        <div class="stat-label">Genres</div>
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
-st.markdown('<div class="sdiv"></div>', unsafe_allow_html=True)
+st.markdown('<hr class="cinema-divider">', unsafe_allow_html=True)
 
-# ── EXAMPLES ──────────────────────────────────────────────────────
-st.markdown('<p class="field-label">Quick Examples</p>', unsafe_allow_html=True)
-selected = st.selectbox("Quick Examples", options=list(EXAMPLES.keys()), label_visibility="collapsed")
-default_text = EXAMPLES[selected]
+st.markdown('<p class="section-label">Quick Examples</p>', unsafe_allow_html=True)
 
-# ── PLOT INPUT ────────────────────────────────────────────────────
-st.markdown('<p class="field-label" style="margin-top:1.1rem">Plot Summary</p>', unsafe_allow_html=True)
+selected_example = st.selectbox(
+    "Load an example plot",
+    options=["— select a genre —"] + list(EXAMPLE_PLOTS.keys()),
+    label_visibility="collapsed"
+)
+
+if selected_example != "— select a genre —":
+    default_text = EXAMPLE_PLOTS[selected_example]
+else:
+    default_text = ""
+
+st.markdown('<p class="section-label" style="margin-top:1.2rem">Plot Summary</p>', unsafe_allow_html=True)
+
 plot_input = st.text_area(
     "Plot Summary",
     value=default_text,
-    height=170,
-    placeholder="Paste or write a movie plot summary here...\n\ne.g. A detective is called to investigate a locked-room murder at a remote lighthouse — and the only suspect is the storm.",
+    height=160,
+    placeholder="Paste or type a movie plot summary here...\n\ne.g. A seasoned detective is drawn into a web of deceit when a mysterious woman walks into his office with a story too dangerous to ignore.",
     label_visibility="collapsed"
 )
 
 char_count = len(plot_input.strip())
 if char_count > 0:
-    st.markdown(f'<p class="char-count">{char_count} characters</p>', unsafe_allow_html=True)
+    st.markdown(f'<p style="font-size:0.72rem; color:#3A3A52; text-align:right; margin-top:-0.5rem;">{char_count} characters</p>', unsafe_allow_html=True)
 
-st.markdown("<div style='margin-top:0.8rem'></div>", unsafe_allow_html=True)
+st.markdown("<div style='margin-top: 1rem;'></div>", unsafe_allow_html=True)
 
-# ── PREDICT ───────────────────────────────────────────────────────
-if st.button("PREDICT GENRE", use_container_width=True):
+predict_btn = st.button("PREDICT GENRE", use_container_width=True)
+
+if predict_btn:
     if plot_input.strip():
         with st.spinner("Analyzing plot..."):
             genre = predict_genre(plot_input.strip())
 
-        genre_key = genre.strip().lower()
-        icon = GENRE_ICONS.get(genre_key, "🎬")
+        genre_clean = genre.strip().lower()
+        icon = GENRE_ICONS.get(genre_clean, "🎬")
         genre_display = genre.strip().upper()
 
         st.markdown(f"""
-        <div class="result-wrap">
-          <div class="result-card">
-            <p class="result-eyebrow">Predicted Genre</p>
-            <p class="result-genre">{icon}&nbsp; {genre_display}</p>
-            <div class="pills">
-              <span class="pill">Logistic Regression</span>
-              <span class="pill">TF-IDF · 10k features</span>
-              <span class="pill">IMDB Dataset</span>
-              <span class="pill">scikit-learn · NLTK</span>
-            </div>
-          </div>
+        <div class="result-card">
+            <p class="result-label">Predicted Genre</p>
+            <p class="result-genre">{icon} {genre_display}</p>
+            <p class="result-meta">
+                Model: Logistic Regression &nbsp;·&nbsp; Vectorizer: TF-IDF (50k features) &nbsp;·&nbsp; Trained on IMDB dataset
+            </p>
         </div>
         """, unsafe_allow_html=True)
     else:
-        st.warning("Enter a plot summary first.")
+        st.warning("Please enter a plot summary before predicting.")
 
-# ── FOOTER ────────────────────────────────────────────────────────
 st.markdown("""
-<div class="site-footer">
-  <p class="footer-name">PlotSense AI</p>
-  <p class="footer-meta">CodSoft ML Internship &nbsp;·&nbsp; Built by Vishvrajsinh Solanki &nbsp;·&nbsp; Logistic Regression + TF-IDF · NLTK · Streamlit</p>
+<div class="cinema-footer">
+    CineGenre AI &nbsp;·&nbsp; CodSoft ML Internship &nbsp;·&nbsp; Built by Vishvrajsinh Solanki
+    <br>Logistic Regression + TF-IDF &nbsp;·&nbsp; scikit-learn · NLTK · Streamlit
 </div>
 """, unsafe_allow_html=True)
