@@ -1,60 +1,25 @@
-# Task 1 — Movie Genre Classification
+# PlotSense (CineGenius) — Movie Genre Classification
 
-Predicts the genre of a movie based on its plot summary using classical NLP and machine learning.
+Predicts a movie's genre from its plot summary using TF-IDF + Logistic Regression, wrapped in a Streamlit app.
 
-## Live Demo
-> Add your Streamlit Cloud URL here after deployment
+## What It Does
 
-## Task
-Build a machine learning model that classifies movies into genres based on plot summaries using TF-IDF vectorization and text classifiers.
-
-## Dataset
-IMDB Genre Classification Dataset — 54,214 labeled plot summaries across 27 genres.
-Separator: `:::` | Format: `ID ::: TITLE ::: GENRE ::: DESCRIPTION`
+Takes a plot summary as input and classifies it across **27 genres**, trained on **54,214 samples**.
 
 ## Approach
-- Text preprocessing with NLTK (stopword removal, Porter stemming)
-- TF-IDF vectorization (50,000 features, bigrams, sublinear TF scaling)
-- Three classifiers benchmarked: Naive Bayes, Logistic Regression, LinearSVC
-- Logistic Regression selected as best performer
 
-## Results
+- **Vectorization:** TF-IDF, `max_features=10,000`, `ngram_range=(1,2)`
+- **Model:** Logistic Regression, `C=5`
+- **Result:** 58.38% accuracy across 27 classes — a meaningfully hard multi-class problem (plot summaries are short, genres overlap, and 27-way classification has a much lower random baseline than binary tasks)
 
-| Model | Accuracy |
-|---|---|
-| Naive Bayes | 49.96% |
-| Logistic Regression | **60.25%** |
-| LinearSVC | 56.99% |
+## Stack
 
-## Project Structure
+Python · scikit-learn · TF-IDF · Logistic Regression · Streamlit
 
-    Task_1_Movie_Genre_Classification/
-    ├── app.py            # Streamlit web application
-    ├── train.py          # Model training script
-    ├── predict.py        # Prediction logic
-    ├── utils.py          # Text cleaning utilities
-    ├── models/           # Saved model and vectorizer (.pkl)
-    ├── data/             # Dataset files
-    └── requirements.txt
+## UI
 
-## Setup and Usage
+Streamlit app with a cinematic dark-gold theme.
 
-**1. Install dependencies**
+---
 
-    pip install -r requirements.txt
-
-**2. Train the model**
-
-    python train.py
-
-**3. Run the app**
-
-    streamlit run app.py
-
-## Libraries
-
-pandas, numpy, nltk, scikit-learn, streamlit
-
-## Author
-
-**Vishvrajsinh Solanki** — CodSoft ML Internship
+*CodSoft Machine Learning Internship — Task 1*
